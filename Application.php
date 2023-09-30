@@ -15,6 +15,11 @@ use App\Core\DB\DbModel;
  */
 class Application
 {
+    const EVENT_BEFORE_REQUEST = 'beforeRequest';
+    const EVENT_AFTER_REQUEST = 'afterRequest';
+
+    protected array $eventListeners = [];
+
     public Router $router;
     public Request $request;
     public Response $response;
@@ -58,6 +63,7 @@ class Application
 
     public function run(): void
     {
+        $this->triggerEvent(self::EVENT_BEFORE_REQUEST);
         try {
             echo $this->router->resolve();
         } catch (\Exception $e) {
@@ -66,7 +72,7 @@ class Application
                 'exception' => $e
             ]);
         }
-        
+
     }
 
     /**
@@ -109,5 +115,19 @@ class Application
     public static function isGuest(): bool
     {
         return !Application::$app->user;
+    }
+
+    public function on(string $eventName, \Closure $callback)
+    {
+        $this->eventListeners[$eventName][] = $callback;
+    }
+
+
+    private function triggerEvent(string $eventName)
+    {
+        $callbacks = $this->eventListeners[$eventName] ?? [];
+        foreach ($callbacks as $callback) {
+            $callback();
+        }
     }
 }
